@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koło Losujące</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+        }
+
+        .left-column, .right-column {
+            width: 45%;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .wheel-container {
+            margin-top: 30px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .management-container {
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .position-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .position-list li {
+            margin-bottom: 10px;
+        }
+
+        .position-list button {
+            background-color: #f44336;
+        }
+
+        .position-list button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Lewa kolumna z kołem -->
+        <div class="left-column">
+            <h1>Koło Losujące</h1>
+            
+            <div>
+                <label for="item-input">Dodaj pozycję do koła:</label>
+                <input type="text" id="item-input" placeholder="Wpisz pozycję" />
+                <button onclick="addItem()">Dodaj</button>
+            </div>
+            
+            <div class="wheel-container">
+                <canvas id="wheelCanvas" width="400" height="400"></canvas> <!-- Zmniejszenie rozmiaru -->
+            </div>
+
+            <button onclick="spinWheel()">Losuj</button>
+
+            <div id="result"></div>
+        </div>
+
+        <!-- Prawa kolumna z zarządzaniem pozycjami -->
+        <div class="right-column">
+            <h2>Zarządzanie pozycjami</h2>
+            <ul class="position-list" id="positionList"></ul>
+        </div>
+    </div>
+
+    <script>
+        let items = JSON.parse(localStorage.getItem('items')) || [];
+        let angle = 0;
+
+        function addItem() {
+            const input = document.getElementById('item-input');
+            const item = input.value.trim();
+
+            if (item && !items.includes(item)) {
+                items.push(item);
+                input.value = '';
+                localStorage.setItem('items', JSON.stringify(items));  // Zapisz do localStorage
+                drawWheel();
+                updatePositionList();
+            }
+        }
+
+        function drawWheel() {
+            const canvas = document.getElementById('wheelCanvas');
+            const ctx = canvas.getContext('2d');
+            const numSegments = items.length;
+            const angleIncrement = (2 * Math.PI) / numSegments;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const radius = canvas.width / 2.5;  // Zmniejszenie promienia koła
+            const startAngle = -Math.PI / 2;
+
+            // Rysowanie koła i segmentów
+            for (let i = 0; i < numSegments; i++) {
+                const angleStart = startAngle + i * angleIncrement;
+                const angleEnd = angleStart + angleIncrement;
+
+                ctx.fillStyle = i % 2 === 0 ? '#f2f2f2' : '#ddd';
+                ctx.beginPath();
+                ctx.arc(radius, radius, radius, angleStart, angleEnd);
+                ctx.lineTo(radius, radius);
+                ctx.fill();
+                
+                // Rysowanie tekstu
+                ctx.save();
+                ctx.translate(radius, radius);
+                ctx.rotate(angleStart + angleIncrement / 2);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'black';
+                ctx.font = '16px Arial';  // Zmniejszenie czcionki
+                ctx.fillText(items[i], radius / 1.5, 0);
+                ctx.restore();
+            }
+        }
+
+        function spinWheel() {
+            if (items.length === 0) {
+                alert("Musisz dodać pozycje do koła!");
+                return;
+            }
+
+            const numSegments = items.length;
+            const spinAngle = Math.random() * 2 * Math.PI + Math.PI * 10;  // losowy kąt obrotu
+            angle += spinAngle;
+
+            const canvas = document.getElementById('wheelCanvas');
+            const ctx = canvas.getContext('2d');
+
+            const interval = setInterval(() => {
+                angle += spinAngle / 10;
+                drawWheelWithSpin(angle);
+            }, 30);
+
+            setTimeout(() => {
+                clearInterval(interval);
+                const winnerIndex = Math.floor((angle % (2 * Math.PI)) / (2 * Math.PI / numSegments));
+                document.getElementById('result').innerText = `Wylosowana pozycja: ${items[winnerIndex]}`;
+            }, 3000); // Czas trwania animacji obrotu
+        }
+
+        function drawWheelWithSpin(currentAngle) {
+            const canvas = document.getElementById('wheelCanvas');
+            const ctx = canvas.getContext('2d');
+            const numSegments = items.length;
+            const angleIncrement = (2 * Math.PI) / numSegments;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const radius = canvas.width / 2.5;  // Zmniejszenie promienia koła
+            const startAngle = -Math.PI / 2;
+
+            // Rysowanie koła i segmentów
+            for (let i = 0; i < numSegments; i++) {
+                const angleStart = startAngle + i * angleIncrement + currentAngle;
+                const angleEnd = angleStart + angleIncrement;
+
+                ctx.fillStyle = i % 2 === 0 ? '#f2f2f2' : '#ddd';
+                ctx.beginPath();
+                ctx.arc(radius, radius, radius, angleStart, angleEnd);
+                ctx.lineTo(radius, radius);
+                ctx.fill();
+
+                // Rysowanie tekstu
+                ctx.save();
+                ctx.translate(radius, radius);
+                ctx.rotate(angleStart + angleIncrement / 2);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'black';
+                ctx.font = '16px Arial';  // Zmniejszenie czcionki
+                ctx.fillText(items[i], radius / 1.5, 0);
+                ctx.restore();
+            }
+        }
+
+        function updatePositionList() {
+            const positionList = document.getElementById('positionList');
+            positionList.innerHTML = ''; // Wyczyść aktualną listę
+
+            items.forEach((item, index) => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `${item} 
+                    <button onclick="editItem(${index})">Edytuj</button> 
+                    <button onclick="removeItem(${index})">Usuń</button>`;
+                positionList.appendChild(listItem);
+            });
+        }
+
+        function removeItem(index) {
+            items.splice(index, 1);  // Usuń pozycję z tablicy
+            localStorage.setItem('items', JSON.stringify(items));  // Zapisz do localStorage
+            drawWheel();
+            updatePositionList();
+        }
+
+        function editItem(index) {
+            const newItem = prompt('Edytuj pozycję:', items[index]);
+            if (newItem && newItem !== items[index]) {
+                items[index] = newItem.trim();
+                localStorage.setItem('items', JSON.stringify(items));  // Zapisz do localStorage
+                drawWheel();
+                updatePositionList();
+            }
+        }
+
+        window.onload = function() {
+            drawWheel();
+            updatePositionList();
+        };
+    </script>
+</body>
+</html>
